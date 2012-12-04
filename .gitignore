@@ -1,0 +1,5 @@
+dist/
+*.egg-info
+venv
+docs/_*/
+.DS_Store

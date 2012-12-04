@@ -1,0 +1,15 @@
+Metadata-Version: 1.0
+Name: django-nested-formsets
+Version: 0.1.0
+Summary: Simple nested formsets in a ModelForm
+Home-page: https://bitbucket.org/ionata/django-nested-formsets
+Author: Ionata Web Solutions
+Author-email: webmaster@ionata.com.au
+License: UNKNOWN
+Description: UNKNOWN
+Platform: UNKNOWN
+Classifier: Environment :: Web Environment
+Classifier: Intended Audience :: Developers
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python
+Classifier: Framework :: Django

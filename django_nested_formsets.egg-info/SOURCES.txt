@@ -1,0 +1,8 @@
+MANIFEST.in
+setup.py
+django_nested_formsets.egg-info/PKG-INFO
+django_nested_formsets.egg-info/SOURCES.txt
+django_nested_formsets.egg-info/dependency_links.txt
+django_nested_formsets.egg-info/not-zip-safe
+django_nested_formsets.egg-info/requires.txt
+django_nested_formsets.egg-info/top_level.txt

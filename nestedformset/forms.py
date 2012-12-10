@@ -2,6 +2,7 @@ from django.forms.models import ModelForm, ModelFormMetaclass
 
 from django.forms.util import ErrorList
 
+
 class NestedModelFormOptions(object):
     def __init__(self, options=None):
         if options is None:
@@ -61,8 +62,7 @@ class NestedModelForm(ModelForm):
             for form in formset:
                 if form.has_changed():
                     if form not in formset.deleted_forms:
-                        sub_instance = form.save(commit=False)
-                        setattr(sub_instance, fk_name, instance)
+                        form.cleaned_data[fk_name] = instance
             formset.save(commit)
 
         if not commit:
@@ -76,9 +76,8 @@ class NestedModelForm(ModelForm):
                     for form in formset:
                         if form.has_changed():
                             if form not in formset.deleted_forms:
-                                sub_instance = form.save(commit=False)
-                                setattr(sub_instance, fk_name, instance)
-                    formset.save()
+                                form.cleaned_data[fk_name] = instance
+                                form.save()
             self.save_formsets = save_formsets
 
         return (instance, formset_instances)

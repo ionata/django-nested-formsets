@@ -12,7 +12,7 @@ except ImportError:
 
 setup(
     name='django-nested-formsets',
-    version="0.1.2",
+    version="0.1.3",
     description='Simple nested formsets in a ModelForm',
     author='Ionata Web Solutions',
     author_email='webmaster@ionata.com.au',

@@ -80,4 +80,6 @@ class NestedModelForm(ModelForm):
                                 form.save()
             self.save_formsets = save_formsets
 
-        return (instance, formset_instances)
+        self.formset_instances = formset_instances
+
+        return instance

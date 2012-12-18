@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 from django.forms.models import ModelForm, ModelFormMetaclass
 
 from django.forms.util import ErrorList
@@ -8,7 +10,19 @@ class NestedModelFormOptions(object):
         if options is None:
             return
 
-        self.formsets = getattr(options, 'formsets', {})
+        formsets = getattr(options, 'formsets', {})
+
+        if isinstance(formsets, dict):
+            # Support dicts for backward-compatibility reasons.
+            # Order will be undefined, unless it is an OrderedDict.
+            formsets = formsets.items()
+
+        elif not isinstance(formsets, (list, tuple)):
+            # Otherwise, it must be a list or tuple of (name, FormsetClass)
+            raise ValueError('NestedMeta.formsets must be an list or tuple of '
+                             '"(name, FormSetClass)" tuples')
+
+        self.formsets = formsets
 
 
 class NestedModelFormMetaclass(ModelFormMetaclass):
@@ -35,9 +49,9 @@ class NestedModelForm(ModelForm):
             instance)
 
         nested_prefix = (prefix + '_') if prefix is not None else ''
-        self.formsets = dict((name, NestedFormSet(data, files, self.instance,
-                                                  prefix=nested_prefix + name))
-            for name, NestedFormSet in self._nested_meta.formsets.items())
+        self.formsets = OrderedDict((name, NestedFormSet(
+                data, files, self.instance, prefix=nested_prefix + name))
+            for name, NestedFormSet in self._nested_meta.formsets)
 
     def is_valid(self):
         is_valid = super(NestedModelForm, self).is_valid()

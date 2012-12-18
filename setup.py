@@ -3,6 +3,8 @@
 Install django-nested-formsets using setuptools
 """
 
+from nestedformsets import __version__
+
 try:
     from setuptools import setup, find_packages
 except ImportError:
@@ -12,7 +14,7 @@ except ImportError:
 
 setup(
     name='django-nested-formsets',
-    version="0.2.0",
+    version=__version__,
     description='Simple nested formsets in a ModelForm',
     author='Ionata Web Solutions',
     author_email='webmaster@ionata.com.au',

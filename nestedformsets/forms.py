@@ -40,18 +40,30 @@ class NestedModelForm(ModelForm):
 
     __metaclass__ = NestedModelFormMetaclass
 
-    def __init__(self, data=None, files=None, auto_id='id_%s',
-        prefix=None, initial=None, error_class=ErrorList, label_suffix=':',
-        empty_permitted=False, instance=None):
+    def __init__(self, data=None, files=None, auto_id='id_%s', prefix=None,
+                 initial=None, formset_extra={}, error_class=ErrorList,
+                 label_suffix=':', empty_permitted=False, instance=None):
 
-        super(NestedModelForm, self).__init__(data, files, auto_id,
-            prefix, initial, error_class, label_suffix, empty_permitted,
-            instance)
+        super(NestedModelForm, self).__init__(
+            data, files, auto_id, prefix, initial, error_class, label_suffix,
+            empty_permitted, instance)
 
+        formsets = self._nested_meta.formsets
         nested_prefix = (prefix + '_') if prefix is not None else ''
-        self.formsets = OrderedDict((name, NestedFormSet(
-                data, files, self.instance, prefix=nested_prefix + name))
-            for name, NestedFormSet in self._nested_meta.formsets)
+
+        def make_formset(name, NestedFormSet):
+            kwargs = {
+                'data': data,
+                'files': files,
+                'instance': self.instance,
+                'prefix': nested_prefix + name,
+            }
+            extra = formset_extra.get(name, {})
+            kwargs.update(extra)
+            return NestedFormSet(**kwargs)
+
+        self.formsets = OrderedDict((name, make_formset(name, NestedFormSet))
+                                    for name, NestedFormSet in formsets)
 
     def is_valid(self):
         is_valid = super(NestedModelForm, self).is_valid()

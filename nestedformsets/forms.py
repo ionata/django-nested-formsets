@@ -100,8 +100,9 @@ class NestedModelForm(ModelForm):
             instances = formset_instances[name] = []
             fk_name = formset.fk.name
             for form in formset:
-                if form.has_changed():
-                    if form not in formset.deleted_forms:
+                if not form.empty_permitted or form.form.has_changed():
+                    if not formset.can_delete or \
+                            form not in formset.deleted_forms:
                         form.cleaned_data[fk_name] = instance
             formset.save(commit)
 
@@ -114,8 +115,9 @@ class NestedModelForm(ModelForm):
                 for name, formset in self.formsets.items():
                     fk_name = formset.fk.name
                     for form in formset:
-                        if form.has_changed():
-                            if form not in formset.deleted_forms:
+                        if not form.empty_permitted or form.has_changed():
+                            if not formset.can_delete or \
+                                    form not in formset.deleted_forms:
                                 form.cleaned_data[fk_name] = instance
                                 form.save()
             self.save_formsets = save_formsets

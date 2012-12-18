@@ -20,7 +20,7 @@ setup(
     author_email='webmaster@ionata.com.au',
     url='https://bitbucket.org/ionata/django-nested-formsets',
 
-    install_requires=['Django>=1.4'],
+    install_requires=['Django>=1.4', 'ordereddict==1.1'],
     zip_safe=False,
 
     packages=find_packages(),

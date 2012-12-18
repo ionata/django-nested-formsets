@@ -3,3 +3,4 @@ dist/
 venv
 docs/_*/
 .DS_Store
+*.pyc

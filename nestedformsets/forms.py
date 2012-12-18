@@ -73,6 +73,20 @@ class NestedModelForm(ModelForm):
 
         return is_valid
 
+    def _get_formset_errors(self):
+        if self._formset_errors is None:
+            self.full_clean()
+        return self._formset_errors
+    formset_errors = property(_get_formset_errors)
+
+    def full_clean(self):
+        super(NestedModelForm, self).full_clean()
+
+        self._formset_errors = {}
+        for name, formset in self.formsets.items():
+            if any(formset.errors):
+                self._formset_errors[name] = formset.errors
+
     def save(self, commit=True):
         instance = super(NestedModelForm, self).save(commit)
 

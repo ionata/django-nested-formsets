@@ -63,8 +63,11 @@ class NestedModelForm(ModelForm):
         self.formsets = self._init_formsets(data, files, formset_extra)
         self.related_forms = self._init_related_forms(data, files,
                                                       related_form_extra)
-        self.subforms = OrderedDict(chain(self.formsets.iteritems(),
-                                          self.related_forms.iteritems()))
+
+    @property
+    def subforms(self):
+        return OrderedDict(chain(self.formsets.iteritems(),
+                                 self.related_forms.iteritems()))
 
     def _init_formsets(self, data, files, extra):
         formsets = self._nested_meta.formsets

@@ -5,9 +5,11 @@ except ImportError:
 
 from itertools import chain
 
-from django.forms.models import ModelForm, ModelFormMetaclass
+from django.forms.models import ModelForm, ModelFormMetaclass,\
+    BaseInlineFormSet, BaseModelFormSet
 
 from django.forms.util import ErrorList
+from django.forms.widgets import Media
 
 
 class NestedModelFormOptions(object):
@@ -26,6 +28,7 @@ class NestedModelFormOptions(object):
             raise ValueError('NestedMeta.formsets must be an list or tuple of '
                              '"(name, FormSet)" tuples')
         self.formsets = formsets
+        self.formsets_querysets = getattr(options, 'formsets_querysets', {})
 
         related_forms = getattr(options, 'related_forms', ())
         if not isinstance(related_forms, (list, tuple)):
@@ -64,6 +67,14 @@ class NestedModelForm(ModelForm):
         self.related_forms = self._init_related_forms(data, files,
                                                       related_form_extra)
 
+    def _get_media(self):
+        media_bits = chain(
+            [super(NestedModelForm, self).media],
+            (f.media for f in self.formsets.values()),
+            (f.media for f in self.related_forms.values()))
+        return sum(media_bits, Media())
+    media = property(_get_media)
+
     @property
     def subforms(self):
         return OrderedDict(chain(self.formsets.iteritems(),
@@ -80,6 +91,22 @@ class NestedModelForm(ModelForm):
                 'instance': self.instance,
                 'prefix': prefix + name,
             }
+
+            if name in self._nested_meta.formsets_querysets.keys():
+                props = self._nested_meta.formsets_querysets.get(name)
+                queryset_method = props.get('queryset')
+                qs_args = props.get('args', [])
+                qs_kwargs = props.get('kwargs', {})
+
+                qs_args = map(lambda arg: kwargs.get(arg), qs_args)
+
+                kwargs.update({
+                    'queryset': queryset_method(*qs_args, **qs_kwargs)
+                })
+
+            if issubclass(FormSet, BaseModelFormSet):
+                del kwargs['instance']
+
             kwargs.update(extra.get(name, {}))
             return (name, FormSet(**kwargs))
 
@@ -147,68 +174,69 @@ class NestedModelForm(ModelForm):
 
     def save(self, commit=True):
 
-        instance = super(NestedModelForm, self).save(commit)
+        # Prepare the instance for saving
+        instance = super(NestedModelForm, self).save(commit=False)
 
-        # The formset forms copy the instance when they are created, so they do
+        # Prepare the formsets for saving
+        formset_instances = {}
+        for name, formset in self.formsets.items():
+            formset_instances[name] = (formset, formset.save(commit=False))
+
+        # Prepare related forms for saving
+        related_instances = {}
+        for name, form in self.related_forms.items():
+            related_instances[name] = (form, form.save(commit=False))
+
+        # The subforms copy the instance when they are created, so they do
         # not know that this instance has just gotten a nice shiny new primary
         # key (if this is a create form, not an edit form). As such, we need to
         # loop through and tell all the related instances about our updated top
         # level instance
-        formset_instances = {}
-        for name, formset in self.formsets.items():
-            fk_name = formset.fk.name
-            for form in formset:
-                if not form.empty_permitted or form.has_changed():
-                    if not (formset.can_delete and
-                            form in formset.deleted_forms):
-                        form.cleaned_data[fk_name] = instance
+        def save_formsets():
+            for formset, subinstances in formset_instances.values():
+                if hasattr(formset, 'm2m_relation'):
+                    formset.save()
+                    return
+                
+                fk_name = formset.fk.name
+                for subinstance in subinstances:
+                    setattr(subinstance, fk_name, instance)
+                    subinstance.save()
+                formset.save_m2m()
 
-            instances = formset.save(commit)
-            formset_instances[name] = instances
+        def save_related_forms():
+            for form, subinstance in related_instances.values():
+                # The subinstance could be None, if the form was empty or the
+                # instance was delete.
+                if subinstance is not None:
+                    fk_name = form._related_meta.fk.name
+                    setattr(subinstance, fk_name, instance)
+                    subinstance.save()
+                    form.save_m2m()
 
-        related_instances = {}
-        for name, form in self.related_forms.items():
-            fk_name = form._related_meta.fk.name
-            if not form.empty_permitted or form.has_changed():
-                if not (form.can_delete and form.will_delete):
-                    form.cleaned_data[fk_name] = instance
-            related_instance = form.save(commit)
-            related_instances[name] = related_instance
+        def save_subforms():
+            save_formsets()
+            save_related_forms()
 
-        if not commit:
+        if commit:
+            # Just save everything using the above helpers.
+            instance.save()
+            save_subforms()
+            self.save_m2m()
+
+        else:
             # if you pass `commit=False`, you have to save the formset
-            # instances yourself. This helper should help.
-            # Simply call `form.save_subforms()`
-            # after you call `instance.save()`
-            def save_formsets():
-                for name, instances in formset_instances.items():
-                    for subinstance in instances:
-                        subinstance.save()
-
-            def save_related_forms():
-                for name, related_instance in related_instances.items():
-                    related_instance.save()
-
-            def save_subforms():
-                save_formsets()
-                save_related_forms()
-
+            # instances yourself. This helper should help.  Simply call
+            # `form.save_subforms()` after you call `instance.save()`
+            # Just like normal forms, if you use `commit=False` you must call
+            # `form.save_m2m()` when you have saved the form and all its
+            # subforms.
             self.save_formsets = save_formsets
             self.save_related_forms = save_related_forms
             self.save_subforms = save_subforms
 
-            # Just like normal forms, if you use commit=False you must call
-            # `form.save_m2m()` when you have saved the form and all its
-            # subforms.
-            def save_m2m():
-                old_save_m2m()
-                for formset in self.formsets.values():
-                    formset.save_m2m()
-                for related_form in self.related_forms.values():
-                    related_form.save_m2m()
-            old_save_m2m = self.save_m2m
-            self.save_m2m = save_m2m
-
-        self.formset_instances = formset_instances
+        instances = lambda d: dict((k, v[1]) for k, v in d.iteritems())
+        self.formset_instances = instances(formset_instances)
+        self.related_instances = instances(related_instances)
 
         return instance

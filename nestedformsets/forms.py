@@ -36,6 +36,7 @@ class NestedModelFormOptions(object):
             raise ValueError('NestedMeta.related_forms must be an list or '
                              'tuple of "(name, RelatedForm)" tuples')
         self.related_forms = related_forms
+        self.related_forms_instance = getattr(options, 'related_forms_instance', {})
 
 
 class NestedModelFormMetaclass(ModelFormMetaclass):
@@ -118,10 +119,16 @@ class NestedModelForm(ModelForm):
         prefix = (self.prefix + '_') if self.prefix is not None else ''
 
         def make_related_form(name, RelatedForm):
+            if name in self._nested_meta.related_forms_instance.keys():
+                gettr = self._nested_meta.related_forms_instance.get(name).get('getattr')
+                instance = gettr(self.instance)
+            else:
+                instance = self.instance
+
             kwargs = {
                 'data': data,
                 'files': files,
-                'instance': self.instance,
+                'instance': instance,
                 'prefix': prefix + name,
             }
             kwargs.update(extra.get(name, {}))
@@ -206,6 +213,10 @@ class NestedModelForm(ModelForm):
 
         def save_related_forms():
             for form, subinstance in related_instances.values():
+                if hasattr(form, 'm2m_relation'):
+                    form.save()
+                    return
+                
                 # The subinstance could be None, if the form was empty or the
                 # instance was delete.
                 if subinstance is not None:
@@ -240,3 +251,4 @@ class NestedModelForm(ModelForm):
         self.related_instances = instances(related_instances)
 
         return instance
+

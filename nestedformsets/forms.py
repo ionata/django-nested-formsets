@@ -201,10 +201,6 @@ class NestedModelForm(ModelForm):
         # level instance
         def save_formsets():
             for formset, subinstances in formset_instances.values():
-                if hasattr(formset, 'm2m_relation'):
-                    formset.save()
-                    return
-                
                 fk_name = formset.fk.name
                 for subinstance in subinstances:
                     setattr(subinstance, fk_name, instance)
@@ -213,10 +209,6 @@ class NestedModelForm(ModelForm):
 
         def save_related_forms():
             for form, subinstance in related_instances.values():
-                if hasattr(form, 'm2m_relation'):
-                    form.save()
-                    return
-                
                 # The subinstance could be None, if the form was empty or the
                 # instance was delete.
                 if subinstance is not None:

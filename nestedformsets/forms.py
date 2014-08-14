@@ -101,8 +101,13 @@ class NestedModelForm(ModelForm):
 
                 qs_args = map(lambda arg: kwargs.get(arg), qs_args)
 
+                qs = queryset_method(*qs_args, **qs_kwargs)
+
+                if not qs.exists():
+                    qs = None
+
                 kwargs.update({
-                    'queryset': queryset_method(*qs_args, **qs_kwargs)
+                    'queryset': qs
                 })
 
             if issubclass(FormSet, BaseModelFormSet):

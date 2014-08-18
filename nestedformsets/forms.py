@@ -103,9 +103,6 @@ class NestedModelForm(ModelForm):
 
                 qs = queryset_method(*qs_args, **qs_kwargs)
 
-                if not qs.exists():
-                    qs = None
-
                 kwargs.update({
                     'queryset': qs
                 })

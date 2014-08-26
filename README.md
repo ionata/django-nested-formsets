@@ -33,8 +33,6 @@ And to render it
     
     {{ article_form }}
     
-    {% for name, subformset in article_form.formsets %}
-        {% for subform in subformset %}
-            {{ subform }}
-        {% endfor %}
+    {% for subformset in article_form.formsets.items %}
+        {{ subform }}
     {% endfor %}
